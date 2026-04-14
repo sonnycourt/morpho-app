@@ -1,0 +1,26 @@
+[functions.ai-coach]
+verify_jwt = false
+
+[functions.generate-daily-message]
+verify_jwt = false
+
+[functions.admin-impersonate]
+verify_jwt = false
+
+[functions.admin-dashboard-data]
+verify_jwt = false
+
+[functions.admin-user-debug]
+verify_jwt = false
+
+[functions.admin-memory-monitor]
+verify_jwt = false
+
+[functions.update-memory]
+verify_jwt = false
+
+[functions.admin-audit-write]
+verify_jwt = false
+
+[functions.admin-audit-log]
+verify_jwt = false
