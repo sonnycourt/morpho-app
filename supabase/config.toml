@@ -27,3 +27,6 @@ verify_jwt = false
 
 [functions.check-mailerlite-access]
 verify_jwt = false
+
+[functions.member-register]
+verify_jwt = false

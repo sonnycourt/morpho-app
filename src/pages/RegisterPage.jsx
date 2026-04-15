@@ -4,15 +4,19 @@ import AuthLayout from '../components/AuthLayout'
 import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
 
-async function checkMailerLiteAccess(email) {
-  const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-mailerlite-access`
+async function registerMember({ email, password, firstName }) {
+  const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-register`
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({
+      email,
+      password,
+      first_name: firstName,
+    }),
   })
   const payload = await res.json().catch(() => ({}))
   return { ok: res.ok, ...payload }
@@ -47,54 +51,32 @@ export default function RegisterPage() {
 
     setLoading(true)
 
-    const accessCheck = await checkMailerLiteAccess(email)
-    if (!accessCheck.ok) {
+    const createRes = await registerMember({ email, password, firstName })
+    if (!createRes.ok) {
       setLoading(false)
       setError(
-        accessCheck?.message ||
+        createRes?.error ||
           "Verification d'acces impossible pour le moment. Reessaie dans quelques instants.",
       )
       return
     }
-
-    if (!accessCheck.allowed) {
-      setLoading(false)
-      setError(
-        "Morpho est reserve aux inscrits d'Esprit Subconscient 2.0. Utilise l'email de ton inscription.",
-      )
-      return
-    }
-
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        data: {
-          first_name: firstName,
-        },
-      },
     })
-
     setLoading(false)
 
-    if (signUpError) {
-      setError(signUpError.message)
-      return
-    }
-
-    const userId = signUpData.user?.id
-    const hasSession = Boolean(signUpData.session)
-    if (userId && hasSession) {
+    if (!signInError && signInData?.session && signInData?.user?.id) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_completed')
-        .eq('id', userId)
+        .eq('id', signInData.user.id)
         .maybeSingle()
       navigate(profile?.onboarding_completed ? '/dashboard' : '/onboarding', { replace: true })
       return
     }
 
-    setMessage('Compte cree. Verifie ton email pour confirmer ton inscription.')
+    setError("Inscription creee mais connexion impossible. Reessaie de te connecter depuis l'ecran login.")
   }
 
   return (
