@@ -27,10 +27,57 @@ function parseGroupIds() {
     .filter(Boolean)
   const single = (Deno.env.get('MAILERLITE_GROUP_ID') ?? '').trim()
   const all = single ? [single, ...multiple] : multiple
-  return Array.from(new Set(all))
+  return Array.from(new Set(all.map((x) => String(x))))
 }
 
-async function checkWithClassicApi(email: string, apiKey: string, allowedGroupIds: string[]) {
+type AccessResult = {
+  allowed: boolean
+  reason: string
+  details?: string
+}
+
+async function checkWithConnectApi(
+  email: string,
+  apiKey: string,
+  allowedGroupIds: string[],
+): Promise<AccessResult> {
+  const endpoint = `https://connect.mailerlite.com/api/subscribers/${encodeURIComponent(email)}`
+  const res = await fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (res.status === 404) {
+    return { allowed: false, reason: 'NOT_FOUND' }
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    return {
+      allowed: false,
+      reason: 'CONNECT_API_ERROR',
+      details: text || `HTTP_${res.status}`,
+    }
+  }
+
+  const payload = (await res.json().catch(() => ({}))) as {
+    data?: { groups?: Array<{ id?: string | number }> }
+  }
+  const groups = payload?.data?.groups ?? []
+  const groupSet = new Set(groups.map((g) => String(g?.id ?? '')))
+  const matched = allowedGroupIds.some((id) => groupSet.has(String(id)))
+
+  return { allowed: matched, reason: matched ? 'ALLOWED' : 'NOT_IN_ALLOWED_GROUP' }
+}
+
+async function checkWithClassicApi(
+  email: string,
+  apiKey: string,
+  allowedGroupIds: string[],
+): Promise<AccessResult> {
   const endpoint = `https://api.mailerlite.com/api/v2/subscribers/${encodeURIComponent(email)}/groups`
   const res = await fetch(endpoint, {
     method: 'GET',
@@ -66,12 +113,14 @@ Deno.serve(async (req) => {
 
   const apiKey = (Deno.env.get('MAILERLITE_API_KEY') ?? '').trim()
   const allowedGroupIds = parseGroupIds()
+  const apiKind = (Deno.env.get('MAILERLITE_API_KIND') ?? 'auto').trim().toLowerCase()
 
   if (!apiKey || !allowedGroupIds.length) {
     return jsonResponse(
       {
         allowed: false,
         reason: 'CONFIG_ERROR',
+        message: 'Configuration MailerLite manquante.',
         error:
           'Missing MAILERLITE_API_KEY or MAILERLITE_GROUP_ID/MAILERLITE_GROUP_IDS function secrets.',
       },
@@ -92,18 +141,34 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const classicResult = await checkWithClassicApi(email, apiKey, allowedGroupIds)
-
-    if (classicResult.allowed) {
-      return jsonResponse({ allowed: true, reason: 'ALLOWED' })
+    const checks: Array<Promise<AccessResult>> = []
+    if (apiKind === 'connect') {
+      checks.push(checkWithConnectApi(email, apiKey, allowedGroupIds))
+    } else if (apiKind === 'classic') {
+      checks.push(checkWithClassicApi(email, apiKey, allowedGroupIds))
+    } else {
+      checks.push(checkWithConnectApi(email, apiKey, allowedGroupIds))
+      checks.push(checkWithClassicApi(email, apiKey, allowedGroupIds))
     }
 
-    if (classicResult.reason === 'NOT_FOUND' || classicResult.reason === 'NOT_IN_ALLOWED_GROUP') {
-      return jsonResponse({
-        allowed: false,
-        reason: 'NOT_MEMBER',
-        message: "Morpho est reserve aux membres d'Esprit Subconscient 2.0.",
-      })
+    let lastError: AccessResult | null = null
+
+    for (const run of checks) {
+      const result = await run
+
+      if (result.allowed) {
+        return jsonResponse({ allowed: true, reason: 'ALLOWED' })
+      }
+
+      if (result.reason === 'NOT_FOUND' || result.reason === 'NOT_IN_ALLOWED_GROUP') {
+        return jsonResponse({
+          allowed: false,
+          reason: 'NOT_MEMBER',
+          message: "Morpho est reserve aux membres d'Esprit Subconscient 2.0.",
+        })
+      }
+
+      lastError = result
     }
 
     return jsonResponse(
@@ -111,6 +176,7 @@ Deno.serve(async (req) => {
         allowed: false,
         reason: 'MAILERLITE_ERROR',
         message: 'Verification impossible pour le moment. Reessaie dans quelques instants.',
+        details: lastError?.reason,
       },
       502,
     )
