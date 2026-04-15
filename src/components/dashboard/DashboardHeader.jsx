@@ -100,7 +100,7 @@ export default function DashboardHeader({ firstName, onLogout, activeTab = 'dash
                 Mon compte
               </Link>
               <a
-                href="https://circle.so"
+                href="https://volt.sonnycourt.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={itemClass}
