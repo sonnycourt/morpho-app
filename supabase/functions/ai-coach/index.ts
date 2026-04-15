@@ -22,6 +22,7 @@ Tes principes fondamentaux :
 - Tu peux proposer des actions concretes UNIQUEMENT quand elles decoulent de l'etat accompli. Pas de conseils generiques. Toujours : "Depuis l'etat ou tu as deja X, qu'est-ce que tu fais maintenant ?"
 - Tu peux inclure de courtes references neuroscientifiques (neuroplasticite, attention selective, prediction du cerveau, reconsolidation de la memoire) pour renforcer la comprehension, sans tomber dans un ton academique.
 - Ces references restent breves (1 phrase max a la fois) et servent l'objectif principal: stabiliser l'etat interne du souhait deja realise.
+- Tu adaptes explicitement ton ton et ta facon d'aider selon le style_de_communication_prefere et ce_qui_le_fait_avancer fournis dans le contexte profil.
 - Tu tutoies. Tu es chaleureux mais jamais mielleux. Tu es honnete mais jamais brutal.
 - Quand le prenom du membre est disponible, tu l'utilises naturellement pour t'adresser a lui.
 - Tu n'appelles jamais le membre "Morpho" : Morpho est le nom de l'application, pas son prenom.
@@ -166,7 +167,7 @@ Deno.serve(async (req) => {
 
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('id, first_name, wish, secondary_wish, total_ai_cost_cents, ai_blocked')
+    .select('id, first_name, wish, secondary_wish, communication_style, motivation_driver, total_ai_cost_cents, ai_blocked')
     .eq('id', userId)
     .maybeSingle()
 
@@ -263,6 +264,8 @@ Deno.serve(async (req) => {
 prenom_membre: ${profile.first_name ?? '(non defini)'}
 wish_principal: ${profile.wish ?? '(non defini)'}
 wish_secondaire: ${profile.secondary_wish ?? '(non defini)'}
+style_de_communication_prefere: ${profile.communication_style ?? '(non defini)'}
+ce_qui_le_fait_avancer: ${profile.motivation_driver ?? '(non defini)'}
 
 memoire_compressee:
 ${JSON.stringify(memoryBlock, null, 2)}

@@ -11,6 +11,48 @@ const labelClass = 'mb-2 block text-[13px] text-[#7a9cc4]'
 const inputClass =
   'w-full rounded-xl border border-blue-500/20 bg-[#091525] px-3 py-2.5 text-sm text-[#e8edf5] outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/25'
 
+const communicationOptions = [
+  ['Cash et direct, sans detour', 'cash_direct'],
+  ['Doux et bienveillant', 'doux_bienveillant'],
+  ['Comme un mentor sage', 'mentor_sage'],
+  ['Comme un pote proche', 'pote_proche'],
+]
+
+const motivationOptions = [
+  ['Quand on me challenge et me confronte', 'challenge_confrontation'],
+  ['Quand on me valide et me rassure', 'validation_reassurance'],
+  ['Quand on me donne des actions concretes', 'actions_concretes'],
+  ["Quand on m'aide a comprendre pourquoi", 'comprendre_pourquoi'],
+]
+
+const ageRangeOptions = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+']
+const genderOptions = [
+  ['Une femme', 'female'],
+  ['Un homme', 'male'],
+  ['Autre / Je prefere ne pas preciser', 'other'],
+]
+const countryOptions = [
+  'France',
+  'Belgique',
+  'Suisse',
+  'Canada',
+  'Maroc',
+  'Algérie',
+  'Tunisie',
+  'Sénégal',
+  "Côte d'Ivoire",
+  'Autre',
+]
+const discoveryOptions = [
+  'Instagram',
+  'TikTok',
+  'YouTube',
+  'Facebook',
+  "Recommandation d'un proche",
+  'Recherche Google',
+  'Autre',
+]
+
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -18,6 +60,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingWishes, setSavingWishes] = useState(false)
+  const [savingQuizPrefs, setSavingQuizPrefs] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
   const [toast, setToast] = useState('')
   const [error, setError] = useState('')
@@ -27,6 +70,12 @@ export default function SettingsPage() {
   const [firstName, setFirstName] = useState('')
   const [wish, setWish] = useState('')
   const [secondaryWish, setSecondaryWish] = useState('')
+  const [communicationStyle, setCommunicationStyle] = useState('')
+  const [motivationDriver, setMotivationDriver] = useState('')
+  const [ageRange, setAgeRange] = useState('')
+  const [gender, setGender] = useState('')
+  const [country, setCountry] = useState('')
+  const [discoverySource, setDiscoverySource] = useState('')
 
   const email = user?.email ?? ''
 
@@ -41,7 +90,9 @@ export default function SettingsPage() {
 
       const { data, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, wish, secondary_wish')
+        .select(
+          'first_name, wish, secondary_wish, communication_style, motivation_driver, age_range, gender, country, discovery_source',
+        )
         .eq('id', user.id)
         .maybeSingle()
 
@@ -53,6 +104,12 @@ export default function SettingsPage() {
         setFirstName(data?.first_name ?? '')
         setWish(data?.wish ?? '')
         setSecondaryWish(data?.secondary_wish ?? '')
+        setCommunicationStyle(data?.communication_style ?? '')
+        setMotivationDriver(data?.motivation_driver ?? '')
+        setAgeRange(data?.age_range ?? '')
+        setGender(data?.gender ?? '')
+        setCountry(data?.country ?? '')
+        setDiscoverySource(data?.discovery_source ?? '')
       }
 
       setLoading(false)
@@ -112,6 +169,33 @@ export default function SettingsPage() {
     }
 
     setToast('Souhaits mis à jour.')
+  }
+
+  const saveQuizPreferences = async () => {
+    if (!user?.id) return
+    setError('')
+    setSavingQuizPrefs(true)
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        communication_style: communicationStyle || null,
+        motivation_driver: motivationDriver || null,
+        age_range: ageRange || null,
+        gender: gender || null,
+        country: country || null,
+        discovery_source: discoverySource || null,
+      })
+      .eq('id', user.id)
+
+    setSavingQuizPrefs(false)
+
+    if (updateError) {
+      setError(updateError.message)
+      return
+    }
+
+    setToast('Préférences quiz mises à jour.')
   }
 
   const sendReset = async () => {
@@ -229,6 +313,101 @@ export default function SettingsPage() {
                     className="rounded-xl bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {savingWishes ? 'Sauvegarde...' : 'Sauvegarder'}
+                  </button>
+                </div>
+              </section>
+
+              <section className={cardClass}>
+                <h2 className="text-lg font-medium text-[#e8edf5]">Préférences quiz</h2>
+                <p className="mt-1 text-xs text-[#7a9cc4]">
+                  Ces informations guident ton coach au quotidien et restent modifiables à tout moment.
+                </p>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className={labelClass}>Style de communication préféré</label>
+                    <select
+                      value={communicationStyle}
+                      onChange={(e) => setCommunicationStyle(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Sélectionner</option>
+                      {communicationOptions.map(([label, value]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Ce qui t'aide le plus à avancer</label>
+                    <select
+                      value={motivationDriver}
+                      onChange={(e) => setMotivationDriver(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Sélectionner</option>
+                      {motivationOptions.map(([label, value]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Âge</label>
+                    <select value={ageRange} onChange={(e) => setAgeRange(e.target.value)} className={inputClass}>
+                      <option value="">Sélectionner</option>
+                      {ageRangeOptions.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Genre</label>
+                    <select value={gender} onChange={(e) => setGender(e.target.value)} className={inputClass}>
+                      <option value="">Sélectionner</option>
+                      {genderOptions.map(([label, value]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Pays</label>
+                    <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass}>
+                      <option value="">Sélectionner</option>
+                      {countryOptions.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Source de découverte</label>
+                    <select
+                      value={discoverySource}
+                      onChange={(e) => setDiscoverySource(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Sélectionner</option>
+                      {discoveryOptions.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={saveQuizPreferences}
+                    disabled={savingQuizPrefs}
+                    className="rounded-xl bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {savingQuizPrefs ? 'Sauvegarde...' : 'Sauvegarder'}
                   </button>
                 </div>
               </section>

@@ -33,13 +33,15 @@ export default function OnboardingPage() {
   const [error, setError] = useState('')
   const [firstName, setFirstName] = useState('toi')
   const [answers, setAnswers] = useState({
+    communication_style: '',
+    motivation_driver: '',
     age_range: '',
     gender: '',
     country: '',
     discovery_source: '',
   })
 
-  const totalQuestions = 4
+  const totalQuestions = 6
   const questionNumber = step >= 0 && step < totalQuestions ? step + 1 : 0
   const progressPercent = questionNumber > 0 ? (questionNumber / totalQuestions) * 100 : 0
 
@@ -49,7 +51,7 @@ export default function OnboardingPage() {
       if (!user?.id) return
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, age_range, gender, country, discovery_source')
+        .select('first_name, communication_style, motivation_driver, age_range, gender, country, discovery_source')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -57,6 +59,8 @@ export default function OnboardingPage() {
       if (data?.first_name?.trim()) setFirstName(data.first_name.trim())
       setAnswers((prev) => ({
         ...prev,
+        communication_style: data?.communication_style ?? '',
+        motivation_driver: data?.motivation_driver ?? '',
         age_range: data?.age_range ?? '',
         gender: data?.gender ?? '',
         country: data?.country ?? '',
@@ -92,6 +96,8 @@ export default function OnboardingPage() {
     const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({
+        communication_style: answers.communication_style || null,
+        motivation_driver: answers.motivation_driver || null,
         age_range: answers.age_range || null,
         gender: answers.gender || null,
         country: answers.country || null,
@@ -134,7 +140,7 @@ export default function OnboardingPage() {
     navigate('/dashboard', { replace: true, state: { skipOnboardingCheck: true } })
   }
 
-  const showBack = step > 0 && step < 4
+  const showBack = step > 0 && step < totalQuestions
 
   const content = (() => {
     if (step === -1) {
@@ -142,7 +148,7 @@ export default function OnboardingPage() {
         <div className="text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-[#e8edf5]">Faisons connaissance</h1>
           <p className="mx-auto mt-4 max-w-md text-base text-[#7a9cc4]">
-            4 questions rapides pour personnaliser ton expérience. Ça prend 30 secondes.
+            6 questions rapides pour personnaliser ton expérience. Ça prend moins d'une minute.
           </p>
           <button
             type="button"
@@ -156,6 +162,68 @@ export default function OnboardingPage() {
     }
 
     if (step === 0) {
+      const options = [
+        ['Cash et direct, sans detour', 'cash_direct'],
+        ['Doux et bienveillant', 'doux_bienveillant'],
+        ['Comme un mentor sage', 'mentor_sage'],
+        ['Comme un pote proche', 'pote_proche'],
+      ]
+      return (
+        <div>
+          <h2 className="text-2xl font-semibold text-[#e8edf5]">Comment tu aimes qu'on te parle ?</h2>
+          <p className="mt-2 text-sm text-[#7a9cc4]">On adapte le ton du coach a ton style prefere.</p>
+          <div className="mt-6 space-y-3">
+            {options.map(([label, value]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleRadio('communication_style', value, 1)}
+                className={`${radioClass} ${
+                  answers.communication_style === value
+                    ? 'border-[#3b82f6] bg-[rgba(37,99,235,0.15)] text-white'
+                    : ''
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 1) {
+      const options = [
+        ['Quand on me challenge et me confronte', 'challenge_confrontation'],
+        ['Quand on me valide et me rassure', 'validation_reassurance'],
+        ['Quand on me donne des actions concretes', 'actions_concretes'],
+        ["Quand on m'aide a comprendre pourquoi", 'comprendre_pourquoi'],
+      ]
+      return (
+        <div>
+          <h2 className="text-2xl font-semibold text-[#e8edf5]">Qu'est-ce qui te fait le plus avancer ?</h2>
+          <p className="mt-2 text-sm text-[#7a9cc4]">Cette preference guide la facon dont Morpho te soutient.</p>
+          <div className="mt-6 space-y-3">
+            {options.map(([label, value]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleRadio('motivation_driver', value, 2)}
+                className={`${radioClass} ${
+                  answers.motivation_driver === value
+                    ? 'border-[#3b82f6] bg-[rgba(37,99,235,0.15)] text-white'
+                    : ''
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 2) {
       const options = [
         ['18 - 24 ans', '18-24'],
         ['25 - 34 ans', '25-34'],
@@ -173,7 +241,7 @@ export default function OnboardingPage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => handleRadio('age_range', value, 1)}
+                onClick={() => handleRadio('age_range', value, 3)}
                 className={`${radioClass} ${
                   answers.age_range === value
                     ? 'border-[#3b82f6] bg-[rgba(37,99,235,0.15)] text-white'
@@ -188,7 +256,7 @@ export default function OnboardingPage() {
       )
     }
 
-    if (step === 1) {
+    if (step === 3) {
       const options = [
         ['Une femme', 'female'],
         ['Un homme', 'male'],
@@ -202,7 +270,7 @@ export default function OnboardingPage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => handleRadio('gender', value, 2)}
+                onClick={() => handleRadio('gender', value, 4)}
                 className={`${radioClass} ${
                   answers.gender === value ? 'border-[#3b82f6] bg-[rgba(37,99,235,0.15)] text-white' : ''
                 }`}
@@ -215,7 +283,7 @@ export default function OnboardingPage() {
       )
     }
 
-    if (step === 2) {
+    if (step === 4) {
       const countries = [
         'France',
         'Belgique',
@@ -246,7 +314,7 @@ export default function OnboardingPage() {
             </select>
             <button
               type="button"
-              onClick={() => animateTo(3, 1)}
+              onClick={() => animateTo(5, 1)}
               disabled={!canContinueCountry}
               className="mt-6 rounded-xl bg-[#2563eb] px-8 py-3 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -257,7 +325,7 @@ export default function OnboardingPage() {
       )
     }
 
-    if (step === 3) {
+    if (step === 5) {
       const options = [
         'Instagram',
         'TikTok',
@@ -278,7 +346,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => {
                   setAnswers((prev) => ({ ...prev, discovery_source: value }))
-                  window.setTimeout(() => animateTo(4, 1), 80)
+                  window.setTimeout(() => animateTo(6, 1), 80)
                 }}
                 className={`${radioClass} ${
                   answers.discovery_source === value
@@ -323,9 +391,9 @@ export default function OnboardingPage() {
         </div>
 
         <div className="mb-8 min-h-[38px]">
-          {step >= 0 && step < 4 ? (
+          {step >= 0 && step < totalQuestions ? (
             <>
-              <p className="mb-2 text-xs text-[#7a9cc4]">Question {questionNumber} sur 4</p>
+          <p className="mb-2 text-xs text-[#7a9cc4]">Question {questionNumber} sur {totalQuestions}</p>
               <div className="h-[3px] w-full max-w-[480px] rounded-full bg-[rgba(59,130,246,0.15)]">
                 <div
                   className="h-[3px] rounded-full bg-[#3b82f6] transition-all duration-300"
