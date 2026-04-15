@@ -52,6 +52,7 @@ export default function LoginPage() {
     <AuthLayout
       title="Connexion"
       subtitle="Bienvenue. Accede a ton espace personnel."
+      showHomeBack
       footer={
         <div className="flex items-center justify-between">
           <Link to="/register" className="text-blue-300 hover:text-blue-200">

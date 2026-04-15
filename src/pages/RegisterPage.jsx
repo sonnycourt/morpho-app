@@ -4,6 +4,10 @@ import AuthLayout from '../components/AuthLayout'
 import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function registerMember({ email, password, firstName }) {
   const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-register`
   const res = await fetch(endpoint, {
@@ -31,6 +35,7 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState('')
   const [acceptedLegal, setAcceptedLegal] = useState(false)
   const [legalError, setLegalError] = useState('')
 
@@ -50,10 +55,16 @@ export default function RegisterPage() {
     }
 
     setLoading(true)
+    setLoadingStep("Verification de ton acces membre Esprit Subconscient 2.0...")
 
-    const createRes = await registerMember({ email, password, firstName })
+    const enforcedUiDelayMs = 3000 + Math.floor(Math.random() * 2000)
+    const [createRes] = await Promise.all([
+      registerMember({ email, password, firstName }),
+      sleep(enforcedUiDelayMs),
+    ])
     if (!createRes.ok) {
       setLoading(false)
+      setLoadingStep('')
       setError(
         createRes?.error ||
           "Verification d'acces impossible pour le moment. Reessaie dans quelques instants.",
@@ -64,7 +75,9 @@ export default function RegisterPage() {
       email,
       password,
     })
+    setLoadingStep('Acces valide. Ouverture de ton espace...')
     setLoading(false)
+    setLoadingStep('')
 
     if (!signInError && signInData?.session && signInData?.user?.id) {
       const { data: profile } = await supabase
@@ -83,6 +96,7 @@ export default function RegisterPage() {
     <AuthLayout
       title="Inscription"
       subtitle="Cree ton compte en moins d'une minute."
+      showHomeBack
       footer={
         <div>
           Deja inscrit ?{' '}
@@ -160,13 +174,34 @@ export default function RegisterPage() {
 
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
         {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
+        {loadingStep ? (
+          <div className="rounded-xl border border-blue-400/30 bg-[linear-gradient(180deg,rgba(59,130,246,0.18)_0%,rgba(30,64,175,0.10)_100%)] px-3 py-2.5 text-xs text-blue-100">
+            <div className="flex items-center justify-between gap-3">
+              <p>{loadingStep}</p>
+              <div className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-200" />
+                <span
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-200"
+                  style={{ animationDelay: '120ms' }}
+                />
+                <span
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-200"
+                  style={{ animationDelay: '240ms' }}
+                />
+              </div>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-blue-950/50">
+              <div className="h-full w-full animate-pulse rounded-full bg-[linear-gradient(90deg,rgba(147,197,253,0.25),rgba(59,130,246,0.8),rgba(147,197,253,0.25))]" />
+            </div>
+          </div>
+        ) : null}
 
         <button
           type="submit"
           disabled={loading || !acceptedLegal}
           className="w-full rounded-xl bg-[var(--accent-blue)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(37,99,235,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {loading ? 'Creation...' : 'Creer mon compte'}
+          {loading ? 'Verification en cours...' : 'Creer mon compte'}
         </button>
       </form>
     </AuthLayout>
