@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.admin-audit-log]
 verify_jwt = false
+
+[functions.check-mailerlite-access]
+verify_jwt = false

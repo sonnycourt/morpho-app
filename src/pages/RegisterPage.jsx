@@ -4,6 +4,20 @@ import AuthLayout from '../components/AuthLayout'
 import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
 
+async function checkMailerLiteAccess(email) {
+  const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-mailerlite-access`
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ email }),
+  })
+  const payload = await res.json().catch(() => ({}))
+  return { ok: res.ok, ...payload }
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -32,6 +46,24 @@ export default function RegisterPage() {
     }
 
     setLoading(true)
+
+    const accessCheck = await checkMailerLiteAccess(email)
+    if (!accessCheck.ok) {
+      setLoading(false)
+      setError(
+        accessCheck?.message ||
+          "Verification d'acces impossible pour le moment. Reessaie dans quelques instants.",
+      )
+      return
+    }
+
+    if (!accessCheck.allowed) {
+      setLoading(false)
+      setError(
+        "Morpho est reserve aux inscrits d'Esprit Subconscient 2.0. Utilise l'email de ton inscription.",
+      )
+      return
+    }
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
